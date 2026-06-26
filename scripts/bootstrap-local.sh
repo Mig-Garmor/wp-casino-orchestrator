@@ -7,7 +7,11 @@ if [ ! -f ".env" ]; then
   echo "Created .env from .env.example"
 fi
 
+echo "Initializing submodules..."
 git submodule update --init --recursive
+
+echo "Updating submodules to latest remote commits..."
+git submodule update --remote --merge
 
 docker compose -f docker-compose.local.yml up -d
 
@@ -26,7 +30,7 @@ docker compose -f docker-compose.local.yml run --rm wpcli wp theme activate "${W
 
 docker compose -f docker-compose.local.yml run --rm wpcli wp plugin activate "${WP_PLUGIN_SLUG:-wp-casino-plugin}" || true
 
-docker compose -f docker-compose.local.yml run --rm wpcli wp rewrite flush
+docker compose -f docker-compose.local.yml run --rm wpcli wp rewrite flush || true
 
 echo ""
 echo "Local WordPress is ready:"
