@@ -1,0 +1,17 @@
+.env
+.env.local
+.env.remote
+
+.DS_Store
+
+# Runtime/export artifacts
+backups/
+exports/
+tmp/
+
+# Editor
+.idea/
+.vscode/
+
+# Logs
+*.log

@@ -1,0 +1,63 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: wp_casino_local_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-wordpress}
+      MYSQL_USER: ${MYSQL_USER:-wordpress}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-wordpress}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+    volumes:
+      - local_db_data:/var/lib/mysql
+
+  wordpress:
+    image: wordpress:php8.3-apache
+    container_name: wp_casino_local_app
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "${LOCAL_WORDPRESS_PORT:-8080}:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE:-wordpress}
+      WORDPRESS_DB_USER: ${MYSQL_USER:-wordpress}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD:-wordpress}
+      WORDPRESS_DEBUG: "1"
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_DEBUG_LOG', true);
+        define('WP_DEBUG_DISPLAY', true);
+        define('SCRIPT_DEBUG', true);
+    volumes:
+      - local_wordpress_data:/var/www/html
+
+      # Mounted Git repositories
+      - ./repos/wp-casino-theme:/var/www/html/wp-content/themes/wp-casino-theme
+      - ./repos/wp-casino-plugin:/var/www/html/wp-content/plugins/wp-casino-plugin
+
+      # Runtime uploads
+      - local_uploads_data:/var/www/html/wp-content/uploads
+
+  wpcli:
+    image: wordpress:cli
+    container_name: wp_casino_local_cli
+    depends_on:
+      - db
+      - wordpress
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE:-wordpress}
+      WORDPRESS_DB_USER: ${MYSQL_USER:-wordpress}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD:-wordpress}
+    volumes:
+      - local_wordpress_data:/var/www/html
+      - ./repos/wp-casino-theme:/var/www/html/wp-content/themes/wp-casino-theme
+      - ./repos/wp-casino-plugin:/var/www/html/wp-content/plugins/wp-casino-plugin
+      - local_uploads_data:/var/www/html/wp-content/uploads
+    working_dir: /var/www/html
+
+volumes:
+  local_db_data:
+  local_wordpress_data:
+  local_uploads_data:
