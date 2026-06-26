@@ -9,7 +9,7 @@ The orchestrator owns:
 - Docker configuration
 - WordPress runtime
 - MySQL runtime
-- WP-CLI helper scripts
+- WP-CLI helper commands
 - Local development setup
 - Remote deployment setup
 - Submodule references to the theme and plugin repositories
@@ -31,6 +31,26 @@ repos/wp-casino-theme
 repos/wp-casino-plugin
   -> /var/www/html/wp-content/plugins/wp-casino-plugin
 ```
+
+## Current submodule setup
+
+This repository already has the theme and plugin configured as Git submodules.
+
+The `.gitmodules` file contains:
+
+```txt
+[submodule "repos/wp-casino-theme"]
+	path = repos/wp-casino-theme
+	url = git@github.com:Mig-Garmor/wp-casino-theme.git
+
+[submodule "repos/wp-casino-plugin"]
+	path = repos/wp-casino-plugin
+	url = git@github.com:Mig-Garmor/wp-casino-plugin.git
+```
+
+That means you do **not** need to run `git submodule add` again.
+
+You only need to initialize and update the existing submodules after cloning the orchestrator.
 
 ## Architecture
 
@@ -55,8 +75,6 @@ Git repositories on the host machine
 
 Docker does not mount GitHub repositories directly. It mounts local folders. Those folders are Git repositories managed by submodules.
 
----
-
 ## Requirements
 
 Install these before running the project:
@@ -73,45 +91,23 @@ docker --version
 docker compose version
 ```
 
+Check Git:
+
+```bash
+git --version
+```
+
 Check GitHub SSH access:
 
 ```bash
 ssh -T git@github.com
 ```
 
-If SSH is not configured, Git submodule cloning will fail.
-
----
-
-## Important note about submodules
-
-The theme and plugin repositories must not be completely empty.
-
-If a repository has no initial commit, adding it as a submodule can fail with an error like:
-
-```txt
-fatal: You are on a branch yet to be born
-fatal: unable to checkout submodule
-```
-
-Before adding the theme/plugin repositories as submodules, make sure each one has at least one commit.
-
-Example for each empty repo:
-
-```bash
-echo "# wp-casino-theme" > README.md
-git add README.md
-git commit -m "Initial commit"
-git push origin main
-```
-
-Do the same for `wp-casino-plugin`.
-
----
+If GitHub SSH access fails, fix that before continuing. Submodule cloning uses SSH and will fail without access.
 
 ## Project structure
 
-Expected structure:
+Expected structure after submodules are initialized:
 
 ```txt
 wp-casino-orchestrator/
@@ -135,8 +131,6 @@ wp-casino-orchestrator/
     wp-local.sh
     wp-remote.sh
 ```
-
----
 
 ## Environment setup
 
@@ -178,82 +172,78 @@ WP_PLUGIN_SLUG=wp-casino-plugin
 
 Do not commit `.env`.
 
----
-
-## First-time orchestrator setup
-
-Use this only when setting up the orchestrator repository for the first time.
-
-From inside `wp-casino-orchestrator`:
-
-```bash
-mkdir -p repos
-mkdir -p scripts
-```
-
-Add the theme repository as a submodule:
-
-```bash
-git submodule add git@github.com:Mig-Garmor/wp-casino-theme.git repos/wp-casino-theme
-```
-
-Add the plugin repository as a submodule:
-
-```bash
-git submodule add git@github.com:Mig-Garmor/wp-casino-plugin.git repos/wp-casino-plugin
-```
-
-Commit the submodule references:
-
-```bash
-git add .gitmodules repos/wp-casino-theme repos/wp-casino-plugin
-git commit -m "Add theme and plugin submodules"
-```
-
-If your GitHub owner/org is different, replace `Mig-Garmor` with the correct GitHub account or organization.
-
----
-
 ## Local development setup
 
-Clone the orchestrator with submodules:
+### 1. Clone the orchestrator with submodules
+
+Use this when cloning the project for the first time:
 
 ```bash
 git clone --recurse-submodules git@github.com:Mig-Garmor/wp-casino-orchestrator.git
 cd wp-casino-orchestrator
 ```
 
-If you already cloned without submodules, run:
+This clones:
+
+```txt
+wp-casino-orchestrator
+repos/wp-casino-theme
+repos/wp-casino-plugin
+```
+
+### 2. If you already cloned without submodules
+
+Run this from the root of `wp-casino-orchestrator`:
 
 ```bash
 git submodule update --init --recursive
 ```
 
-Create the environment file:
+Or use the helper command:
+
+```bash
+./scripts/init-submodules.sh
+```
+
+### 3. Create the local environment file
 
 ```bash
 cp .env.example .env
 ```
 
-Make scripts executable:
+### 4. Make scripts executable
 
 ```bash
 chmod +x scripts/*.sh
 ```
 
-Start the local WordPress environment:
+### 5. Start the local WordPress environment
 
 ```bash
 ./scripts/bootstrap-local.sh
 ```
 
-Open WordPress:
+This command should:
+
+```txt
+1. Initialize submodules if needed
+2. Start the MySQL container
+3. Start the WordPress container
+4. Install WordPress if it is not already installed
+5. Activate the theme
+6. Activate the plugin
+7. Flush rewrite rules
+```
+
+### 6. Open WordPress locally
+
+Frontend:
 
 ```txt
 http://localhost:8080
 ```
 
-Open WordPress admin:
+Admin:
 
 ```txt
 http://localhost:8080/wp-admin
@@ -267,8 +257,6 @@ Password: admin
 ```
 
 These credentials are for local development only.
-
----
 
 ## Local development workflow
 
@@ -298,21 +286,36 @@ For custom post type or rewrite changes:
 ./scripts/wp-local.sh rewrite flush
 ```
 
-For plugin activation changes:
+For checking active themes:
+
+```bash
+./scripts/wp-local.sh theme list
+```
+
+For checking active plugins:
+
+```bash
+./scripts/wp-local.sh plugin list
+```
+
+For activating the theme manually:
+
+```bash
+./scripts/wp-local.sh theme activate wp-casino-theme
+```
+
+For activating the plugin manually:
+
+```bash
+./scripts/wp-local.sh plugin activate wp-casino-plugin
+```
+
+For deactivating and reactivating the plugin:
 
 ```bash
 ./scripts/wp-local.sh plugin deactivate wp-casino-plugin
 ./scripts/wp-local.sh plugin activate wp-casino-plugin
 ```
-
-For checking active themes and plugins:
-
-```bash
-./scripts/wp-local.sh theme list
-./scripts/wp-local.sh plugin list
-```
-
----
 
 ## Useful local commands
 
@@ -328,7 +331,7 @@ Stop local containers:
 docker compose -f docker-compose.local.yml down
 ```
 
-Stop and delete local volumes:
+Stop local containers and delete local volumes:
 
 ```bash
 docker compose -f docker-compose.local.yml down -v
@@ -336,13 +339,13 @@ docker compose -f docker-compose.local.yml down -v
 
 Use this when you want to fully reset the local WordPress database and uploads.
 
-Rebuild local environment after reset:
+Rebuild the local environment after a reset:
 
 ```bash
 ./scripts/bootstrap-local.sh
 ```
 
-View container logs:
+View all local container logs:
 
 ```bash
 docker compose -f docker-compose.local.yml logs -f
@@ -362,20 +365,25 @@ Run WP-CLI locally:
 ./scripts/wp-local.sh rewrite flush
 ```
 
----
-
 ## Working with submodules locally
 
 The theme and plugin are real Git repositories inside `repos/`.
 
-To work on the theme:
+### Updating the theme
+
+Go into the theme repo:
 
 ```bash
 cd repos/wp-casino-theme
+```
+
+Make sure you are on the right branch:
+
+```bash
 git checkout main
 ```
 
-Make changes, then commit and push from inside the theme repo:
+Make your changes, then commit and push them:
 
 ```bash
 git add .
@@ -383,13 +391,19 @@ git commit -m "Update casino theme"
 git push origin main
 ```
 
-Then return to the orchestrator:
+Return to the orchestrator:
 
 ```bash
 cd ../..
 ```
 
-The orchestrator now sees that the submodule points to a new commit.
+The orchestrator now sees that the submodule points to a different commit.
+
+Check status:
+
+```bash
+git status
+```
 
 Commit the updated submodule pointer:
 
@@ -399,34 +413,58 @@ git commit -m "Update theme submodule pointer"
 git push origin main
 ```
 
-Same workflow for the plugin:
+### Updating the plugin
+
+Go into the plugin repo:
 
 ```bash
 cd repos/wp-casino-plugin
+```
+
+Make sure you are on the right branch:
+
+```bash
 git checkout main
+```
+
+Make your changes, then commit and push them:
+
+```bash
 git add .
 git commit -m "Update casino plugin"
 git push origin main
+```
 
+Return to the orchestrator:
+
+```bash
 cd ../..
+```
+
+Check status:
+
+```bash
+git status
+```
+
+Commit the updated submodule pointer:
+
+```bash
 git add repos/wp-casino-plugin
 git commit -m "Update plugin submodule pointer"
 git push origin main
 ```
 
-This matters because the orchestrator does not store the full theme/plugin code. It stores references to exact commits.
+The important rule is:
 
----
-
-## Updating submodules
-
-To initialize submodules:
-
-```bash
-./scripts/init-submodules.sh
+```txt
+Theme/plugin code is committed inside the theme/plugin repositories.
+The orchestrator only commits the updated submodule pointer.
 ```
 
-To update submodules to their tracked remote branches:
+## Updating submodules to latest remote commits
+
+Run:
 
 ```bash
 ./scripts/update-submodules.sh
@@ -438,15 +476,13 @@ Then review the result:
 git status
 ```
 
-Commit updated submodule pointers:
+If the submodule pointers changed, commit them:
 
 ```bash
 git add repos/wp-casino-theme repos/wp-casino-plugin
 git commit -m "Update theme and plugin submodules"
 git push origin main
 ```
-
----
 
 ## Remote deployment setup
 
@@ -464,7 +500,7 @@ Example server directory:
 /srv/wp-casino-orchestrator
 ```
 
-Create the deployment directory:
+### 1. Create the deployment directory
 
 ```bash
 sudo mkdir -p /srv/wp-casino-orchestrator
@@ -472,19 +508,25 @@ sudo chown -R $USER:$USER /srv/wp-casino-orchestrator
 cd /srv/wp-casino-orchestrator
 ```
 
-Clone the orchestrator with submodules:
+### 2. Clone the orchestrator with submodules
 
 ```bash
 git clone --recurse-submodules git@github.com:Mig-Garmor/wp-casino-orchestrator.git .
 ```
 
-If already cloned without submodules:
+If the repo was already cloned without submodules, run:
 
 ```bash
 git submodule update --init --recursive
 ```
 
-Create the remote environment file:
+Or use the helper command:
+
+```bash
+./scripts/init-submodules.sh
+```
+
+### 3. Create the remote environment file
 
 ```bash
 cp .env.example .env
@@ -515,13 +557,13 @@ WP_THEME_SLUG=wp-casino-theme
 WP_PLUGIN_SLUG=wp-casino-plugin
 ```
 
-Make scripts executable:
+### 4. Make scripts executable
 
 ```bash
 chmod +x scripts/*.sh
 ```
 
-Run remote bootstrap:
+### 5. Start the remote WordPress environment
 
 ```bash
 ./scripts/bootstrap-remote.sh
@@ -539,16 +581,31 @@ Open admin:
 https://your-domain.com/wp-admin
 ```
 
----
-
 ## Remote deployment workflow
 
-After changes have been pushed to the theme/plugin repositories and the orchestrator submodule pointers have been updated, deploy on the server:
+After changes have been pushed to the theme/plugin repositories and the orchestrator submodule pointers have been updated, deploy on the server.
+
+Go to the remote project directory:
 
 ```bash
 cd /srv/wp-casino-orchestrator
+```
+
+Pull the latest orchestrator changes:
+
+```bash
 git pull origin main
+```
+
+Update the submodules to the commits stored in the orchestrator:
+
+```bash
 git submodule update --init --recursive
+```
+
+Restart the remote containers:
+
+```bash
 docker compose -f docker-compose.remote.yml up -d
 ```
 
@@ -569,8 +626,6 @@ Check active plugins:
 ```bash
 ./scripts/wp-remote.sh plugin list
 ```
-
----
 
 ## Remote mount behavior
 
@@ -610,8 +665,6 @@ MySQL data
   -> persistent Docker volume
 ```
 
----
-
 ## Expected Docker Compose behavior
 
 Local compose file:
@@ -642,8 +695,6 @@ Purpose:
 - Disable WordPress debug display
 - Expose WordPress on port `80`
 
----
-
 ## Common problems
 
 ### Submodule folder is empty
@@ -652,6 +703,12 @@ Run:
 
 ```bash
 git submodule update --init --recursive
+```
+
+Or run:
+
+```bash
+./scripts/init-submodules.sh
 ```
 
 ### GitHub SSH permission denied
@@ -706,13 +763,13 @@ Then run:
 
 ### Custom post type URLs return 404
 
-Flush rewrite rules:
+Flush rewrite rules locally:
 
 ```bash
 ./scripts/wp-local.sh rewrite flush
 ```
 
-Remote:
+Flush rewrite rules remotely:
 
 ```bash
 ./scripts/wp-remote.sh rewrite flush
@@ -729,8 +786,6 @@ docker compose -f docker-compose.local.yml down -v
 
 This deletes the local database and uploads volume.
 
----
-
 ## What this repository should not contain
 
 Do not commit:
@@ -743,8 +798,6 @@ Do not commit:
 - Plugin source code directly outside the submodule
 
 The orchestrator should stay focused on runtime orchestration.
-
----
 
 ## Mental model
 
