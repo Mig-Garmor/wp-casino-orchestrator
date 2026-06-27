@@ -1,6 +1,0 @@
-[submodule "repos/wp-casino-theme"]
-	path = repos/wp-casino-theme
-	url = git@github.com:Mig-Garmor/wp-casino-theme.git
-[submodule "repos/wp-casino-plugin"]
-	path = repos/wp-casino-plugin
-	url = git@github.com:Mig-Garmor/wp-casino-plugin.git

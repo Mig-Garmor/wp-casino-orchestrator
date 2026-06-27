@@ -1,0 +1,16 @@
+{
+  "name": "WP Casino Dev",
+  "dockerComposeFile": "../docker-compose.local.yml",
+  "service": "wordpress",
+  "workspaceFolder": "/var/www/html/wp-content",
+  "shutdownAction": "stopCompose",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bmewburn.vscode-intelephense-client",
+        "xdebug.php-debug",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  }
+}
